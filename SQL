@@ -1,0 +1,212 @@
+CREATE DATABASE Retailer_System
+
+-- Customer Table
+CREATE TABLE Customer (
+    Customer_ID INT PRIMARY KEY,
+    Name VARCHAR(100) NOT NULL,
+    Email VARCHAR(100) UNIQUE,
+    Phone_Number VARCHAR(15),
+    Address TEXT,
+    Join_Date DATE
+);
+
+-- Product Table
+CREATE TABLE Product (
+    Product_ID INT PRIMARY KEY,
+    Product_Name VARCHAR(100) NOT NULL,
+    Category_ID INT,
+    Price DECIMAL(10, 2),
+    Stock_Quantity INT,
+    Supplier_ID INT,
+    FOREIGN KEY (Category_ID) REFERENCES Category(Category_ID),
+    FOREIGN KEY (Supplier_ID) REFERENCES Supplier(Supplier_ID)
+);
+
+-- Category Table
+CREATE TABLE Category (
+    Category_ID INT PRIMARY KEY,
+    Category_Name VARCHAR(100) NOT NULL
+);
+
+-- Order Table
+CREATE TABLE Orders (
+    Order_ID INT PRIMARY KEY,
+    Customer_ID INT,
+    Order_Date DATE NOT NULL,
+    Total_Amount DECIMAL(10, 2),
+    Status VARCHAR(50),
+    FOREIGN KEY (Customer_ID) REFERENCES Customer(Customer_ID)
+);
+
+
+-- Order_Item Table
+CREATE TABLE Order_Item (
+    Order_Item_ID INT PRIMARY KEY,
+    Order_ID INT,
+    Product_ID INT,
+    Quantity INT,
+    Price DECIMAL(10, 2),
+    FOREIGN KEY (Order_ID) REFERENCES Orders(Order_ID),
+    FOREIGN KEY (Product_ID) REFERENCES Product(Product_ID)
+);
+
+-- Supplier Table
+CREATE TABLE Supplier (
+    Supplier_ID INT PRIMARY KEY,
+    Supplier_Name VARCHAR(100) NOT NULL,
+    Contact_Info VARCHAR(100),
+    Address TEXT
+);
+
+-- Payment Table
+CREATE TABLE Payment (
+    Payment_ID INT PRIMARY KEY,
+    Order_ID INT,
+    Payment_Method VARCHAR(50),
+    Amount DECIMAL(10, 2),
+    Payment_Date DATE,
+    FOREIGN KEY (Order_ID) REFERENCES Orders(Order_ID)
+);
+
+-- Depart Table
+CREATE TABLE Department (
+    Department_ID INT PRIMARY KEY,
+    Department_Name VARCHAR(100) NOT NULL,
+    Location VARCHAR(100),
+    Head_of_Department INT
+);
+
+CREATE TABLE Employee (
+    Employee_ID INT PRIMARY KEY,
+    First_Name VARCHAR(100) NOT NULL,
+    Last_Name VARCHAR(100),
+    Date_of_Birth DATE,
+    Gender VARCHAR(10),
+    Position VARCHAR(50),
+    Department_ID INT,
+    Hire_Date DATE,
+    Salary DECIMAL(10, 2),
+    Manager_ID INT,
+    FOREIGN KEY (Department_ID) REFERENCES Department(Department_ID),
+    FOREIGN KEY (Manager_ID) REFERENCES Employee(Employee_ID)
+);
+
+
+-- Project Table
+CREATE TABLE Project (
+    Project_ID INT PRIMARY KEY,
+    Project_Name VARCHAR(100) NOT NULL,
+    Start_Date DATE,
+    End_Date DATE,
+    Budget DECIMAL(10, 2),
+    Department_ID INT,
+    FOREIGN KEY (Department_ID) REFERENCES Department(Department_ID)
+);
+
+-- Employee_Project Table
+CREATE TABLE Employee_Project (
+    Employee_ID INT,
+    Project_ID INT,
+    Hours_Worked INT,
+    PRIMARY KEY (Employee_ID, Project_ID),
+    FOREIGN KEY (Employee_ID) REFERENCES Employee(Employee_ID),
+    FOREIGN KEY (Project_ID) REFERENCES Project(Project_ID)
+);
+
+
+---- Queries ----
+
+--- JOIN ---
+
+SELECT 
+    Employee.Employee_ID AS EmployeeID,
+    CONCAT(Employee.First_Name, ' ', Employee.Last_Name) AS EmployeeName,
+    Department.Department_Name AS DepartmentName,
+    Project.Project_Name AS ProjectName,
+    Project.Start_Date AS ProjectStartDate,
+    Project.End_Date AS ProjectEndDate,
+    Employee_Project.Hours_Worked AS HoursWorked
+FROM 
+    Employee
+INNER JOIN 
+    Department ON Employee.Department_ID = Department.Department_ID
+LEFT JOIN 
+    Employee_Project ON Employee.Employee_ID = Employee_Project.Employee_ID
+LEFT JOIN 
+    Project ON Employee_Project.Project_ID = Project.Project_ID
+ORDER BY 
+    DepartmentName, EmployeeName, ProjectStartDate;
+
+
+SELECT 
+    Product.Product_ID, 
+    Product.Product_Name, 
+    Category.Category_Name
+FROM 
+    Product
+RIGHT JOIN 
+    Category ON Product.Category_ID = Category.Category_ID;
+
+
+----- Commit & Rollback -----
+
+BEGIN TRANSACTION;
+
+-- Insert a new customer
+INSERT INTO Customer (Customer_ID, Name, Email, Phone_Number, Address, Join_Date)
+VALUES (101, 'John Doe', 'johndoe@example.com', '1234567890', '123 Elm Street', '2025-01-21');
+
+-- Add an order for the customer
+INSERT INTO Orders (Order_ID, Customer_ID, Order_Date, Total_Amount, Status)
+VALUES (201, 101, '2025-01-21', 150.00, 'Processing');
+
+-- Commit the transaction
+COMMIT;
+
+
+BEGIN TRANSACTION;
+
+-- Delete a product
+DELETE FROM Product WHERE Product_ID = 1;
+
+-- Oops! Something went wrong, roll back the changes
+ROLLBACK;
+
+
+
+----- calculation -----
+
+SELECT 
+    Product.Product_Name, 
+    SUM(Order_Item.Quantity * Order_Item.Price) AS Total_Sales
+FROM 
+    Order_Item
+INNER JOIN 
+    Product ON Order_Item.Product_ID = Product.Product_ID
+GROUP BY 
+    Product.Product_Name
+ORDER BY 
+    Total_Sales DESC;
+
+
+SELECT 
+    Employee_ID, 
+    First_Name, 
+    Last_Name, 
+    Salary
+FROM 
+    Employee
+ORDER BY 
+    Salary DESC
+LIMIT 5;
+
+
+SELECT 
+    Department.Department_Name, 
+    COUNT(Employee.Employee_ID) AS Employee_Count
+FROM 
+    Department
+LEFT JOIN 
+    Employee ON Department.Department_ID = Employee.Department_ID
+GROUP BY 
+    Department.Department_Name;
